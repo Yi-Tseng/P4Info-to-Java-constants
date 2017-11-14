@@ -22,22 +22,30 @@ copyright = '''
 '''
 
 imports = '''
-import org.onosproject.net.pi.runtime.PiActionId;
-import org.onosproject.net.pi.runtime.PiActionParamId;
-import org.onosproject.net.pi.runtime.PiActionProfileId;
-import org.onosproject.net.pi.runtime.PiCounterId;
-import org.onosproject.net.pi.runtime.PiCounterType;
-import org.onosproject.net.pi.runtime.PiHeaderFieldId;
-import org.onosproject.net.pi.runtime.PiPacketMetadataId;
-import org.onosproject.net.pi.runtime.PiTableId;'''
+import org.onosproject.net.pi.model.PiActionId;
+import org.onosproject.net.pi.model.PiActionParamId;
+import org.onosproject.net.pi.model.PiActionProfileId;
+import org.onosproject.net.pi.model.PiControlMetadataId;
+import org.onosproject.net.pi.model.PiCounterId;
+import org.onosproject.net.pi.model.PiMatchFieldId;
+import org.onosproject.net.pi.model.PiTableId;'''
 
 PKG_FMT = 'package org.onosproject.pipelines.%s;'
 
-CLASS_OPEN = 'public interface %s {'
+CLASS_OPEN = 'public final class %s {'
 CLASS_CLOSE = '}'
 
-CONST_FMT = '    %s %s = %s;'
-SHORT_CONST_FMT ='''    %s %s =
+DEFAULT_CONSTRUCTOR = '''
+    // hide default constructor
+    private FabricConstants() {
+    }
+'''
+
+DOT = '''    public static final String DOT = ".";'''
+HDR = '''    public static final String HDR = "hdr";'''
+
+CONST_FMT = '    public static final %s %s = %s;'
+SHORT_CONST_FMT ='''    public static final %s %s =
             %s;'''
 JAVA_STR = 'String'
 EMPTY_STR = ''
@@ -45,19 +53,28 @@ JAVA_DOC_FMT = '''/**
  * Constants for %s pipeline.
  */'''
 
-PI_HDR_FIELD_ID = 'PiHeaderFieldId'
-PI_HDR_FIELD_ID_CST = 'PiHeaderFieldId.of(%s, "%s")'
-PI_HDR_ID_NAME = 'HDR_%s_%s_ID'
-PI_HDR_ID_NH_NAME = 'HDR_%s_ID' # no header
+BUILD_PI_MATCH_FIELD_FUNC = '''    private static PiMatchFieldId buildPiMatchField(String header, String field, boolean withHdrPrefix) {
+        if (withHdrPrefix) {
+            return PiMatchFieldId.of(HDR + DOT + header + DOT + field);
+        } else {
+            return PiMatchFieldId.of(header + DOT + field);
+        }
+    }
+'''
+
+PI_HF_FIELD_ID = 'PiMatchFieldId'
+PI_HF_FIELD_ID_CST = 'buildPiMatchField(%s, "%s", %s)'
+PI_HF_ID_NAME = 'HF_%s_%s_ID'
+PI_HF_ID_NH_NAME = 'HF_%s_ID' # no header
 
 PI_TBL_ID = 'PiTableId'
 PI_TBL_ID_CST = 'PiTableId.of("%s")'
 PI_TBL_ID_NAME = 'TBL_%s_ID'
 
 PI_CTR_ID = 'PiCounterId'
-PI_CTR_ID_CST = 'PiCounterId.of("%s", PiCounterType.INDIRECT)'
+PI_CTR_ID_CST = 'PiCounterId.of("%s")'
 PI_CTR_ID_NAME = 'CNT_%s_ID'
-PI_DIR_CTR_ID_CST = 'PiCounterId.of("%s", PiCounterType.DIRECT)'
+PI_DIR_CTR_ID_CST = 'PiCounterId.of("%s")'
 
 PI_ACT_ID = 'PiActionId'
 PI_ACT_ID_CST = 'PiActionId.of("%s")'
@@ -71,9 +88,9 @@ PI_ACT_PROF_ID = 'PiActionProfileId'
 PI_ACT_PROF_ID_CST = 'PiActionProfileId.of("%s")'
 PI_ACT_PROF_ID_NAME = 'ACT_PRF_%s_ID'
 
-PI_PKT_META_ID = 'PiPacketMetadataId'
-PI_PKT_META_ID_CST = 'PiPacketMetadataId.of("%s")'
-PI_PKT_META_ID_NAME = 'PKT_META_%s_ID'
+PI_PKT_META_ID = 'PiControlMetadataId'
+PI_PKT_META_ID_CST = 'PiControlMetadataId.of("%s")'
+PI_PKT_META_ID_NAME = 'CTRL_META_%s_ID'
 
 class ConstantClassGenerator(object):
     headers = set()
@@ -141,27 +158,33 @@ class ConstantClassGenerator(object):
         lines.append(self.java_doc)
         # generate the class
         lines.append(CLASS_OPEN % (self.class_name, ))
+        lines.append(DEFAULT_CONSTRUCTOR)
+        lines.append(DOT)
         lines.append('    // Header IDs')
+        lines.append(HDR);
         for hdr in self.headers:
             lines.append(self.const_line(JAVA_STR, hdr.upper(), '"' + hdr + '"'))
         lines.append(EMPTY_STR)
 
         lines.append('    // Header field IDs')
         for hf in self.header_fields:
-            header_name = hf.split('.')[-2:-1]
+            splitted = hf.split('.')
+            header_name = splitted[-2:-1]
             header_name = ''.join(header_name)
             header_name = header_name.upper()
             field_name = hf.split('.')[-1]
+            with_hdr_prefix = 'true' if splitted[0] == 'hdr' else 'false'
 
             # field = hf.split('.')[1]
             if len(header_name) == 0:
                 header_name = '""'
-                field_var_name = PI_HDR_ID_NH_NAME % (field_name.upper())
+                field_var_name = PI_HF_ID_NH_NAME % (field_name.upper())
             else:
-                field_var_name = PI_HDR_ID_NAME % (header_name, field_name.upper())
-            field_cst = PI_HDR_FIELD_ID_CST % (header_name, field_name)
-            lines.append(self.const_line(PI_HDR_FIELD_ID, field_var_name, field_cst))
+                field_var_name = PI_HF_ID_NAME % (header_name, field_name.upper())
+            field_cst = PI_HF_FIELD_ID_CST % (header_name, field_name, with_hdr_prefix)
+            lines.append(self.const_line(PI_HF_FIELD_ID, field_var_name, field_cst))
         lines.append(EMPTY_STR)
+        lines.append(BUILD_PI_MATCH_FIELD_FUNC)
 
         lines.append('    // Table IDs')
         for tbl in self.tables:
