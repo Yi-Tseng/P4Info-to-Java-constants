@@ -138,7 +138,7 @@ class ConstantClassGenerator(object):
                 self.action_params.add(param.name)
 
         for act_prof in p4info.action_profiles:
-            self.action_profiles.add(act_prof.preamble.alias)
+            self.action_profiles.add(act_prof.preamble.name)
 
         for cpm in p4info.controller_packet_metadata:
             for mta in cpm.metadata:
@@ -228,7 +228,7 @@ class ConstantClassGenerator(object):
 
         lines.append('    // Action Profile IDs')
         for act_prof in self.action_profiles:
-            act_prof_var_name = PI_ACT_PROF_ID_NAME % (act_prof.upper())
+            act_prof_var_name = PI_ACT_PROF_ID_NAME % (act_prof.upper().replace('.', '_'))
             act_prof_cst = PI_ACT_PROF_ID_CST % (act_prof, )
             lines.append(self.const_line(PI_ACT_PROF_ID, act_prof_var_name, act_prof_cst))
         lines.append(EMPTY_STR)
