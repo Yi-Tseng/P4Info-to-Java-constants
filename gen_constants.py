@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 import sys
 import p4info_pb2 as proto
 import google.protobuf.text_format as tf
@@ -146,7 +146,7 @@ class ConstantClassGenerator(object):
 
     def const_line(self, type, name, value):
         line = CONST_FMT % (type, name, value)
-        if len(line) > 120:
+        if len(line) > 80:
             line = SHORT_CONST_FMT % (type, name, value)
         return line
 
@@ -213,7 +213,9 @@ class ConstantClassGenerator(object):
 
         lines.append('    // Action IDs')
         for act in self.actions:
-            act_var_name = self.strip_control_name(act)
+            # don't strip block name because we might have multiple action 
+            # with same name in different block (e.g. drop)
+            act_var_name = act.replace('.', '_')
             act_var_name = PI_ACT_ID_NAME % (act_var_name.upper())
             act_cst = PI_ACT_ID_CST % (act, )
             lines.append(self.const_line(PI_ACT_ID, act_var_name, act_cst))
@@ -250,7 +252,7 @@ class ConstantClassGenerator(object):
 
 def main():
     if (len(sys.argv) < 3):
-        print 'Usage: %s BaseName P4InfoFile' % sys.argv[0]
+        print('Usage: gen_constants.py BaseName P4InfoFile')
         sys.exit(1)
     base_name = sys.argv[1]
     file_name = sys.argv[2]
@@ -261,7 +263,7 @@ def main():
 
     gen = ConstantClassGenerator(base_name)
     gen.parse(p4info)
-    print gen
+    print(gen)
 
 if __name__ == '__main__':
     main()
