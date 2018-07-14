@@ -2,6 +2,7 @@
 import sys
 import p4info_pb2 as proto
 import google.protobuf.text_format as tf
+import re
 
 copyright = '''
 /*
@@ -28,7 +29,8 @@ import org.onosproject.net.pi.model.PiActionProfileId;
 import org.onosproject.net.pi.model.PiControlMetadataId;
 import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiMatchFieldId;
-import org.onosproject.net.pi.model.PiTableId;'''
+import org.onosproject.net.pi.model.PiTableId;
+'''
 
 PKG_FMT = 'package org.onosproject.pipelines.%s;'
 
@@ -37,7 +39,7 @@ CLASS_CLOSE = '}'
 
 DEFAULT_CONSTRUCTOR = '''
     // hide default constructor
-    private FabricConstants() {
+    private %s() {
     }
 '''
 
@@ -105,8 +107,8 @@ class ConstantClassGenerator(object):
 
     def __init__(self, base_name):
 
-        self.class_name = base_name.title() + 'Constants'
-        self.package_name = PKG_FMT % (base_name, )
+        self.class_name = (base_name if base_name[0].isupper() else  base_name.title()) + 'Constants'
+        self.package_name = PKG_FMT % (base_name.lower(), )
         self.java_doc = JAVA_DOC_FMT % (base_name, )
 
     def strip_control_name(self, name):
@@ -158,7 +160,9 @@ class ConstantClassGenerator(object):
         lines.append(self.java_doc)
         # generate the class
         lines.append(CLASS_OPEN % (self.class_name, ))
-        lines.append(DEFAULT_CONSTRUCTOR)
+        lines.append(DEFAULT_CONSTRUCTOR % (self.class_name, ))
+        if (constants_in):
+            lines.append(constants_in)
         lines.append(DOT)
         lines.append('    // Header IDs')
         lines.append(HDR);
@@ -213,7 +217,7 @@ class ConstantClassGenerator(object):
 
         lines.append('    // Action IDs')
         for act in self.actions:
-            # don't strip block name because we might have multiple action 
+            # don't strip block name because we might have multiple action
             # with same name in different block (e.g. drop)
             act_var_name = act.replace('.', '_')
             act_var_name = PI_ACT_ID_NAME % (act_var_name.upper())
@@ -252,7 +256,7 @@ class ConstantClassGenerator(object):
 
 def main():
     if (len(sys.argv) < 3):
-        print('Usage: gen_constants.py BaseName P4InfoFile')
+        print('Usage: gen_constants.py BaseName P4InfoFile [CopyrightAndConstantsFile]')
         sys.exit(1)
     base_name = sys.argv[1]
     file_name = sys.argv[2]
@@ -260,6 +264,18 @@ def main():
     with open(file_name) as f:
         s = f.read()
         tf.Merge(s, p4info)
+
+    global copyright, constants_in
+    constants_in = None
+    if (len(sys.argv) == 4):
+        with open(sys.argv[3]) as in_file:
+            other_input = re.search('^(\s*/\*.*?\*/)?(?:\s*\n)?(.*?)\s*$', in_file.read(), re.DOTALL)
+            if (not other_input):
+                print('File ' + sys.argv[3] +' has invalid sytax')
+                sys.exit(1)
+            if (other_input.group(1)):
+                copyright = other_input.group(1) + "\n"
+            constants_in = other_input.group(2) + "\n"
 
     gen = ConstantClassGenerator(base_name)
     gen.parse(p4info)
