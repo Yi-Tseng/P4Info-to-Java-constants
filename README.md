@@ -10,7 +10,7 @@ Dependencies:
 Usage:
 ```$ gen_constants.py BaseName P4InfoFilePath [CopyrightAndConstantsFile]```
 
-When the optional copyright and constants file is specified it contents will
+When the optional copyright and constants file is specified its contents will
 be read and included in the generated output. If it starts with
 a ```/* single or multi line text */``` style comment that comment will be
 the first of the generated output. Any lines after the comment, or all
