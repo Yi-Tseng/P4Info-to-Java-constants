@@ -1,12 +1,2 @@
-P4Info to Java constants tool
-====
-
-Generates ONOS Java constants according to the P4 Info file.
-
-Dependencies:
- - Python2.7 or higher
- - protobuf 3.2.x python package
-
-Usage:
-```$ gen_constants.py BaseName P4InfoFilePath```
-
+This script was moved to ONOS repo, to contribute, please find it here:
+https://github.com/opennetworkinglab/onos/blob/master/tools/dev/bin/onos-gen-p4-constants
